@@ -43,7 +43,19 @@ def update(car: dict, throttle_perc: float, mass: float = 1000, max_throttle_for
 def calculate_desired_acceleration(car: dict, K_P: float, K_I: float = 0.0, K_D: float = 0.0) -> tuple[float, float]:
         #input: car["v"], car["desired_v"] (floats)
         #output: desired acceleration and error tuple(float, float)
-        pass # delete this line and write your PID code here
+        #Error = difference from target and current speed
+        error = car["desired_v"] - car["v"]
+        if car["error_prev"] is None:
+                derivative = 0.0
+        else:
+                derivative = (error - car["error_prev"]) / car["dt"]
+        car["error_prev"] = error
+        car["net_integral"] += error * car["dt"]
+        car["net_integral"] = np.clip(car["net_integral"], -100, 100)
+        #Slowly add the entirety of the PID equation in I get it nowww (on step 5 when writing this)
+        #After running step 5, I see it overshoots, which makes sense because K_D would help stabalize the speed of the car during fast climbs
+        c = K_P * error + K_I * car["net_integral"] + K_D * derivative
+        return (c, error) #Tuples are variables that hold multiple values, need to put tuple before values 
 
 
 
@@ -51,4 +63,10 @@ def calculate_desired_acceleration(car: dict, K_P: float, K_I: float = 0.0, K_D:
 def acceleration_to_throttle_percentage(acceleration_desired: float, mass: float = 1000, max_throttle_force: float = 5000) -> float:
         #input: desired_acceleration(float)
         #output: throttle percentage (float, -1 to 1)
-        pass # delete this line and write your code to convert desired acceleration to throttle here
+        # car is 1000kg, max force of 5000N
+        #Max acceleration is 5 m/s/s because 5000/1000 = 5 (cant go higher than this so upper bound)
+        max_acceleration = max_throttle_force / mass
+        throttle_percentage = acceleration_desired / max_acceleration #getting a percentage by comparing to highest possible acceleration, then we can use that for throttle
+        #np.clip(value, min, max)
+        throttle_percentage = np.clip(throttle_percentage, -1, 1)
+        return throttle_percentage
